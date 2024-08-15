@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoraggio Produzione</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/luxon/2.1.1/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon"></script>
+    <style>
+        body {
+            background: url('images/wallpaperbetter.com_7680x4320 (1).jpg') no-repeat center center;
+            background-size: cover;
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1500px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            margin: auto;
+        }
+
+        #chart-container {
+            width: 100%;
+            height: 350px;
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .chart-box {
+            width: 48%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chart-label {
+            margin-top: 10px;
+            font-size: 1.2em;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        #data-summary {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 20px;
+    margin-bottom: 40px;
+    align-items: center;
+    font-size: 1.5em; /* Aumenta la dimensione del carattere dei dati */
+}
+
+.data-column {
+    width: 48%;
+    text-align: left;
+    margin-top: 20px;
+}
+
+
+        .footer-logos {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: absolute;
+            bottom: 20px;
+            padding: 0 20px;
+        }
+
+        .footer-logos img.logo-edil {
+            max-width: 300px;
+            max-height: 100px;
+            position: relative;
+            top: 10px;
+        }
+
+        .footer-logos img.logo-left {
+            max-width: 150px;
+            max-height: 50px;
+            position: relative;
+            left: 20px;
+            top: 10px;
+        }
+
+        .logo-todi {
+            position: absolute;
+            max-width: 200px;
+            max-height: 100px;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+            box-sizing: border-box;
+            right: 10px;
+            top: 10px;
+        }
+
+        #popup-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+            position: relative;
+        }
+
+        #popup {
+            width: 100%;
+            height: 100px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #popup img {
+            width: 6.25%;
+            margin-right: 10px;
+        }
+
+        #popup-message {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        #clock-meteo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: absolute;
+            top: 20px;
+            text-align: center;
+        }
+
+        #digital-clock {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        #temperature {
+            font-size: 1.5em;
+        }
+
+        .weather-icon {
+            width: 50px;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="clock-meteo-container">
+        <div id="digital-clock"></div>
+        <div id="temperature"></div>
+        <div id="wind"></div>
+    </div>
+
+    <img src="images/logo-carrozzeria-todi-def.png" alt="Carrozzeria Todi" class="logo-todi">
+    
+    <div class="container">
+        <h1>Monitoraggio Impianto Fotovoltaico Carrozzeria Todi SA</h1>
+        <h2>Grafico di Produzione</h2>
+        <div id="chart-container">
+            <div class="chart-box">
+                <canvas id="kWhChartYesterday"></canvas>
+                <div class="chart-label">Produzione di ieri</div>
+            </div>
+            <div class="chart-box">
+                <canvas id="kWhChartToday"></canvas>
+                <div class="chart-label">Produzione di oggi</div>
+            </div>
+        </div>
+        <div id="data-summary">
+            <div class="data-column">
+                <p id="installed-power">Potenza installata: --</p>
+                <p id="current-power">Potenza attuale: --</p>
+                <p id="daily-energy">Produzione totale di oggi: --</p>
+                <p id="yesterday-production">Produzione totale di ieri: --</p>
+                <p id="monthly-production">Produzione mensile: --</p>
+                <p id="historical-production">Produzione storica: --</p>
+            </div>
+            <div class="data-column">
+                <p>Inverter: SE90K</p>
+                <p>Marca Inverter: SolarEdge</p>
+                <p>Numero di moduli FV: 251</p>
+                <p>Numero di ottimizzatori: 127</p>
+                <p>Modello Moduli: Trina Solar Vertex 445W</p>
+                <p>Nome Installatore: iSolar by Edil Repairs SAGL</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="popup-container">
+        <div id="popup">
+            <div id="popup-message">
+                <img src="images/logo elin 24.png" alt="Elin 24">
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-logos">
+        <img src="images/logo isolar.png" alt="Isolar" class="logo-left">
+        <img src="images/logo edil 2024.png" alt="Edil 2024" class="logo-edil">
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const siteId = '4328925';
+            const apiKey = 'TKPQL69YEV7C8FVA5COHEHD2F9YQY32C';
+            selectSite(siteId, apiKey);
+
+            setInterval(() => {
+                selectSite(siteId, apiKey);
+            }, 900000);
+
+            setInterval(showPopup, 13000);
+            setInterval(updateClock, 1000);
+            fetchWeather();
+            setInterval(fetchWeather, 600000);
+        });
+
+        let chartKWhToday;
+        let chartKWhYesterday;
+        let messageIndex = 0;
+
+        function selectSite(siteId, apiKey) {
+            getCurrentProduction(siteId, apiKey);
+            getYesterdayProduction(siteId, apiKey);
+            updateChart('today', siteId, apiKey);
+            updateChart('yesterday', siteId, apiKey);
+        }
+
+        function formatNumber(num) {
+            if (num == null) {
+                return '0 W';
+            }
+            if (num >= 1e3) {
+                return Math.round(num / 1e3).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'") + " kW";
+            } else {
+                return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'") + " W";
+            }
+        }
+
+        function getCurrentProduction(siteId, apiKey) {
+            fetch(`/api/site/${siteId}/overview?api_key=${apiKey}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.overview) {
+                        const dailyEnergy = data.overview.lastDayData.energy || 0;
+                        const historicalProduction = data.overview.lifeTimeData.energy || 0;
+                        const monthlyProduction = data.overview.lastMonthData.energy || 0;
+                        const currentPower = data.overview.currentPower.power || 0;
+
+                        document.getElementById('daily-energy').textContent = `Produzione totale di oggi: ${formatNumber(dailyEnergy)}`;
+                        document.getElementById('historical-production').textContent = `Produzione storica: ${formatNumber(historicalProduction)}`;
+                        document.getElementById('monthly-production').textContent = `Produzione mensile: ${formatNumber(monthlyProduction)}`;
+                        document.getElementById('current-power').textContent = `Potenza attuale: ${formatNumber(currentPower)}`;
+                        document.getElementById('installed-power').textContent = `Potenza installata: 111.69 kW`;
+                    } else {
+                        console.error("Dati di overview non trovati:", data);
+                    }
+                })
+                .catch(error => {
+                    console.error("Errore nel recupero dei dati:", error);
+                });
+        }
+
+        function getYesterdayProduction(siteId, apiKey) {
+            let yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const formattedDate = yesterday.toISOString().split('T')[0];
+
+            fetch(`/api/site/${siteId}/energy?startDate=${formattedDate}&endDate=${formattedDate}&timeUnit=DAY&api_key=${apiKey}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.energy && data.energy.values && data.energy.values.length > 0) {
+                        const yesterdayEnergy = data.energy.values[0].value || 0;
+                        document.getElementById('yesterday-production').textContent = `Produzione totale di ieri: ${formatNumber(yesterdayEnergy)}`;
+                    } else {
+                        document.getElementById('yesterday-production').textContent = `Produzione totale di ieri: 0 kWh`;
+                        console.error("Dati di produzione di ieri non trovati:", data);
+                    }
+                })
+                .catch(error => {
+                    console.error("Errore nel recupero dei dati di produzione di ieri:", error);
+                });
+        }
+
+        function updateChart(day, siteId, apiKey) {
+            let endDate, startDate;
+            endDate = new Date().toISOString().split('T')[0];
+            startDate = new Date();
+            if (day === 'yesterday') {
+                startDate.setDate(startDate.getDate() - 1);
+                endDate = startDate.toISOString().split('T')[0];
+            }
+            startDate = startDate.toISOString().split('T')[0];
+
+            fetch(`/api/site/${siteId}/energy?startDate=${startDate}&endDate=${endDate}&timeUnit=HOUR&api_key=${apiKey}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.energy && data.energy.values) {
+                        const labels = data.energy.values.map(entry => new Date(entry.date));
+                        const values = data.energy.values.map(entry => entry.value / 1000);
+
+                        if (day === 'today' && chartKWhToday) {
+                            chartKWhToday.destroy();
+                        } else if (day === 'yesterday' && chartKWhYesterday) {
+                            chartKWhYesterday.destroy();
+                        }
+
+                        const ctx = document.getElementById(day === 'today' ? 'kWhChartToday' : 'kWhChartYesterday').getContext('2d');
+                        const chartInstance = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: `Produzione ${day === 'today' ? 'di oggi' : 'di ieri'} (kWh)`,
+                                    data: values,
+                                    borderColor: 'rgba(0, 255, 0, 1)',
+                                    backgroundColor: 'rgba(0, 255, 0, 0.2)',
+                                    borderWidth: 1,
+                                    pointRadius: 0
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    x: {
+                                        type: 'time',
+                                        time: {
+                                            unit: 'hour',
+                                            tooltipFormat: 'HH:mm',
+                                            displayFormats: {
+                                                hour: 'HH:mm',
+                                                day: 'MMM D'
+                                            }
+                                        },
+                                        ticks: {
+                                            color: 'white'
+                                        }
+                                    },
+                                    y: {
+                                        beginAtZero: false,
+                                        ticks: {
+                                            color: 'white'
+                                        },
+                                        title: {
+                                            display: true,
+                                            text: 'Produzione (kWh)',
+                                            color: 'white'
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (context) {
+                                                let label = context.dataset.label || '';
+                                                if (label) {
+                                                    label += ': ';
+                                                }
+                                                if (context.parsed.y !== null) {
+                                                    label += parseFloat(context.parsed.y).toFixed(2) + ' kWh';
+                                                }
+                                                return label;
+                                            }
+                                        }
+                                    },
+                                    legend: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        });
+
+                        if (day === 'today') {
+                            chartKWhToday = chartInstance;
+                        } else if (day === 'yesterday') {
+                            chartKWhYesterday = chartInstance;
+                        }
+                    } else {
+                        console.error("Dati di energy non trovati:", data);
+                    }
+                })
+                .catch(error => {
+                    console.error("Errore nel recupero dei dati delle ultime 24 ore:", error);
+                });
+        }
+
+        function showPopup() {
+            const popup = document.getElementById('popup-message');
+            const dailyEnergy = parseFloat(document.getElementById('daily-energy').textContent.split(": ")[1].replace(' kWh', ''));
+            const historicalProduction = parseFloat(document.getElementById('historical-production').textContent.split(": ")[1].replace(' kWh', ''));
+            const monthlyProduction = parseFloat(document.getElementById('monthly-production').textContent.split(": ")[1].replace(' kWh', ''));
+
+            const messages = [
+                `Oggi l'impianto ha prodotto ${dailyEnergy} kWh, sufficiente per alimentare 3 case per un giorno intero.`,
+                `Con la produzione storica di ${historicalProduction} kWh, l'impianto ha evitato l'emissione di ${Math.round(historicalProduction * 0.6)} kg di CO2, pari a quanto prodotto da un'auto che percorre 6.000 km.`,
+                `La produzione di ${monthlyProduction} kWh di questo mese equivale all'energia necessaria per alimentare una scuola media per 2 settimane.`,
+                `Grazie a questa produzione, sono stati risparmiati ${Math.round(monthlyProduction * 0.6)} kg di CO2, come piantare 60 nuovi alberi.`,
+                `L'impianto ha prodotto oggi il ${(dailyEnergy / 12000 * 100).toFixed(2)}% del fabbisogno energetico mensile della carrozzeria.`,
+                `Dal primo giorno, l'impianto ha prodotto ${historicalProduction} kWh, l'equivalente dell'energia utilizzata da 100 famiglie in un mese.`,
+                `Se ogni casa avesse un impianto come questo, si risparmierebbero ${Math.round(dailyEnergy * 30)} kg di CO2 al mese.`,
+                `Oggi sono stati risparmiati ${Math.round(dailyEnergy * 0.6)} kg di CO2, abbastanza per riempire 50 palloni da spiaggia.`,
+                `La produzione di ${monthlyProduction} kWh di questo mese potrebbe alimentare un ospedale per 24 ore.`,
+                `Ogni kWh prodotto da questo impianto riduce l'impronta di carbonio della carrozzeria, contribuendo alla sostenibilità aziendale.`,
+                `Con ${historicalProduction} kWh di produzione storica, l'impianto ha contribuito a ridurre l'inquinamento come se si fossero piantati 200 alberi.`,
+                `La produzione di oggi ha risparmiato l'energia sufficiente per ricaricare 10.000 smartphone.`,
+                `Grazie all'impianto fotovoltaico, la carrozzeria ha ridotto i costi energetici del ${(dailyEnergy / 12000 * 100).toFixed(2)}% solo oggi.`,
+                `Oggi sono stati risparmiati ${Math.round(dailyEnergy * 0.6)} kg di CO2, come se si evitassero le emissioni di un'auto per 200 km.`,
+                `L'energia prodotta oggi equivale a quella necessaria per far funzionare 200 lavatrici a pieno carico.`,
+            ];
+
+            const message = messages[messageIndex];
+            messageIndex = (messageIndex + 1) % messages.length;
+
+            popup.innerHTML = message;
+
+            setTimeout(() => {
+                popup.innerHTML = '<img src="images/logo elin 24.png" alt="Elin 24">';
+            }, 10000);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const currentTime = `${hours}:${minutes}:${seconds}`;
+            document.getElementById('digital-clock').textContent = currentTime;
+        }
+
+        function fetchWeather() {
+            const latitude = 45.851;
+            const longitude = 8.936;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`;
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.current_weather) {
+                        const temperature = data.current_weather.temperature;
+                        const weatherCode = data.current_weather.weathercode;
+                        const windSpeed = data.current_weather.windspeed;
+                        const weatherDescription = getWeatherDescription(weatherCode);
+
+                        document.getElementById('temperature').textContent = `Meteo a Stabio: ${temperature}°C, ${weatherDescription}`;
+                        document.getElementById('wind').textContent = `Velocità del vento: ${windSpeed} km/h`;
+                    } else {
+                        console.error("Dati meteo non trovati:", data);
+                    }
+                })
+                .catch(error => {
+                    console.error("Errore nel recupero dei dati meteo:", error);
+                });
+        }
+
+        function getWeatherDescription(code) {
+            const descriptions = {
+                0: "Cielo sereno",
+                1: "Prevalentemente sereno",
+                2: "Parzialmente nuvoloso",
+                3: "Nuvoloso",
+                45: "Nebbia",
+                48: "Nebbia congelante",
+                51: "Leggera pioggia",
+                53: "Pioggia moderata",
+                55: "Forte pioggia",
+                56: "Leggera pioggia congelante",
+                57: "Pioggia congelante moderata o forte",
+                61: "Leggera pioggia a tratti",
+                63: "Pioggia a tratti moderata",
+                65: "Forte pioggia a tratti",
+                66: "Leggera pioggia congelante a tratti",
+                67: "Pioggia congelante moderata o forte a tratti",
+                71: "Leggera nevicata",
+                73: "Moderata nevicata",
+                75: "Forte nevicata",
+                77: "Granelli di neve",
+                80: "Leggero rovescio di pioggia",
+                81: "Moderato rovescio di pioggia",
+                82: "Forte rovescio di pioggia",
+                85: "Leggero rovescio di neve",
+                86: "Forte rovescio di neve",
+                95: "Temporale leggero o moderato",
+                96: "Temporale con grandine leggera",
+                99: "Temporale con grandine forte"
+            };
+            return descriptions[code] || "Meteo sconosciuto";
+        }
+    </script>
+</body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
